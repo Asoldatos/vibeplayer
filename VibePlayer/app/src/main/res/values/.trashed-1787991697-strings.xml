@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">VibePlayer</string>
+    <string name="app_title">MP3 → Vibration Player</string>
+    <string name="select_mp3">Select MP3 File</string>
+    <string name="no_file_selected">No file selected</string>
+    <string name="status_idle">Pick a song to begin</string>
+    <string name="analyzing">Analyzing audio…</string>
+    <string name="analysis_complete">Ready! Duration: %.1fs of vibration</string>
+    <string name="analysis_failed">Analysis failed: %s</string>
+    <string name="playing_vibration">Playing vibration (no audio)…</string>
+    <string name="stopped">Stopped</string>
+    <string name="play_vibration">Play Vibration</string>
+    <string name="stop">Stop</string>
+    <string name="no_vibrator_warning">This device has no vibration motor.</string>
+    <string name="no_amplitude_control_warning">Device lacks amplitude control — vibration will be on/off only, not intensity-varying.</string>
+</resources>
