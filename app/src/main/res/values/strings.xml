@@ -8,6 +8,7 @@
     <string name="analysis_complete">Ready! Duration: %.1fs of vibration</string>
     <string name="analysis_failed">Analysis failed: %s</string>
     <string name="playing_vibration">Playing vibration (no audio)…</string>
+    <string name="playing_vibration_no_intensity">Playing (on/off only \u2014 device has no intensity control)</string>
     <string name="stopped">Stopped</string>
     <string name="play_vibration">Play Vibration</string>
     <string name="stop">Stop</string>
