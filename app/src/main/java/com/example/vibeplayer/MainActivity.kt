@@ -42,6 +42,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var playbackHandler: Handler? = null
+    private var playbackRunnable: Runnable? = null
+    private var playbackIndex = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -102,17 +106,75 @@ class MainActivity : AppCompatActivity() {
 
     private fun playVibration() {
         val wf = waveform ?: return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val effect = VibrationEffect.createWaveform(wf.timings, wf.amplitudes, -1)
-            vibrator.vibrate(effect)
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(wf.timings, -1)
+        stopVibration()
+
+        val useComposition = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            !vibrator.hasAmplitudeControl() &&
+            runCatching {
+                vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)
+            }.getOrDefault(false)
+
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator.hasAmplitudeControl() -> {
+                val effect = VibrationEffect.createWaveform(wf.timings, wf.amplitudes, -1)
+                vibrator.vibrate(effect)
+                binding.status.text = getString(R.string.playing_vibration)
+            }
+            useComposition -> {
+                playbackHandler = Handler(Looper.getMainLooper())
+                playbackIndex = 0
+                binding.status.text = getString(R.string.playing_vibration)
+                playNextCompositionBatch(wf)
+            }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                val effect = VibrationEffect.createWaveform(wf.timings, wf.amplitudes, -1)
+                vibrator.vibrate(effect)
+                binding.status.text = getString(R.string.playing_vibration_no_intensity)
+            }
+            else -> {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(wf.timings, -1)
+                binding.status.text = getString(R.string.playing_vibration)
+            }
         }
-        binding.status.text = getString(R.string.playing_vibration)
+    }
+
+    private fun playNextCompositionBatch(wf: VibrationWaveform) {
+        if (playbackIndex >= wf.timings.size) return
+
+        val batchLimit = 40
+        val composition = VibrationEffect.startComposition()
+        var batchDurationMs = 0L
+        var count = 0
+        var i = playbackIndex
+
+        while (i < wf.timings.size && count < batchLimit) {
+            val durationMs = wf.timings[i]
+            val amp = wf.amplitudes[i]
+            if (amp > 0) {
+                val scale = (amp / 255f).coerceIn(0.05f, 1f)
+                composition.addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, scale, 0)
+            }
+            batchDurationMs += durationMs
+            i++
+            count++
+        }
+
+        playbackIndex = i
+        vibrator.vibrate(composition.compose())
+
+        if (playbackIndex < wf.timings.size) {
+            val runnable = Runnable { playNextCompositionBatch(wf) }
+            playbackRunnable = runnable
+            playbackHandler?.postDelayed(runnable, batchDurationMs)
+        } else {
+            playbackHandler?.postDelayed({ binding.status.text = getString(R.string.stopped) }, batchDurationMs)
+        }
     }
 
     private fun stopVibration() {
+        playbackRunnable?.let { playbackHandler?.removeCallbacks(it) }
+        playbackRunnable = null
         vibrator.cancel()
         binding.status.text = getString(R.string.stopped)
     }
